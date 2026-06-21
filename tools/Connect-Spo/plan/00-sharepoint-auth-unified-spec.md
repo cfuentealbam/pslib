@@ -24,6 +24,8 @@ Definir una capacidad funcional unificada, identificada como tool `Connect-Spo`,
 - Soporte funcional para modo `Interactive`.
 - Soporte opcional recomendado para modo `DeviceCode` cuando el entorno de ejecución no permita una experiencia interactiva con navegador local; su adopción obligatoria queda pendiente de aprobación explícita.
 - Exposición de un comando público principal esperado llamado `Connect-Spo` para iniciar la autenticación SharePoint unificada.
+- Registro de un contexto SharePoint activo en la sesión PowerShell actual tras una autenticación exitosa, para que las tools adoptantes puedan reutilizar `SiteUrl`, `TenantId`, `ClientId`, `AuthMode` y la conexión PnP sin repetir parámetros en llamadas posteriores.
+- Reutilización de una conexión activa y válida cuando `Connect-Spo` se invoca nuevamente para el mismo `SiteUrl` y `ClientId`, evitando repetir el login.
 - Ubicación objetivo del tool aprobada como `tools/Connect-Spo`, alineada con el nombre funcional del tool `Connect-Spo`.
 - Publicación de la capacidad reusable como módulo PowerShell no compilado bajo `modules/Connect-Spo`.
 - Importación por nombre desde una sesión cuyo `PSModulePath` haga disponible el módulo: `Import-Module Connect-Spo`.
@@ -31,6 +33,8 @@ Definir una capacidad funcional unificada, identificada como tool `Connect-Spo`,
 - Consumo por tools adoptantes como dependencia de módulo declarada por nombre, sin rutas relativas hacia `tools/Connect-Spo`.
 - Mensajes claros para errores de login, permisos insuficientes, configuración faltante o cancelación del usuario, con mínimos funcionales propuestos.
 - Mensaje claro y accionable cuando una tool adoptante no pueda encontrar o importar el módulo `Connect-Spo`.
+- Ejecución en modo Quiet por defecto: `Connect-Spo` no debe emitir mensajes narrativos, de estado, progreso o diagnóstico salvo que el operador use `-Verbose`.
+- Conservación en modo Quiet de las salidas necesarias para interacción con el usuario, como instrucciones/códigos de login, prompts requeridos por el flujo interactivo y errores accionables.
 - No solicitar contraseña directamente al usuario.
 - No guardar secretos en disco.
 - Documentar las condiciones esperadas para App Registration en Entra ID y permisos delegados adecuados según el alcance real de cada tool.
@@ -62,6 +66,7 @@ Definir una capacidad funcional unificada, identificada como tool `Connect-Spo`,
 ## Salidas Funcionales Observables
 
 - Sesión o contexto de autenticación disponible para que una tool SharePoint continúe su operación autorizada.
+- Contexto SharePoint activo disponible en la sesión PowerShell actual tras ejecutar `Connect-Spo` exitosamente.
 - Comando público principal observable `Connect-Spo` disponible para iniciar el flujo de conexión/autenticación SharePoint.
 - Módulo PowerShell no compilado `Connect-Spo` disponible bajo `modules/Connect-Spo` e importable por nombre cuando esté expuesto en `PSModulePath`.
 - Confirmación clara de autenticación exitosa, cuando la tool decida mostrarla.
@@ -71,6 +76,8 @@ Definir una capacidad funcional unificada, identificada como tool `Connect-Spo`,
   - Permisos insuficientes: `Autenticación completada, pero la cuenta o la aplicación no tiene permisos suficientes para el sitio u operación solicitada.`
   - Configuración inválida o incompleta: `No se puede iniciar autenticación: falta o es inválido uno de los datos requeridos: SiteUrl, TenantId o ClientId.`
   - Módulo no disponible: `No se puede cargar la dependencia Connect-Spo. Instale o exponga el módulo Connect-Spo en PSModulePath y vuelva a ejecutar la operación.`
+- En modo Quiet, ausencia de mensajes auxiliares de estado o progreso que no sean necesarios para completar la interacción de autenticación.
+- Con `-Verbose`, emisión de los mensajes informativos, diagnósticos o de progreso que existían antes de aprobar el modo Quiet.
 - Ausencia de prompts de contraseña propios de la tool.
 - Ausencia de secretos persistidos por la tool.
 
@@ -85,6 +92,8 @@ Definir una capacidad funcional unificada, identificada como tool `Connect-Spo`,
 - Los permisos delegados deben corresponder al alcance real de cada tool; por ejemplo, lectura de sitios para tools de lectura o permisos de escritura solo si la tool modifica contenido.
 - Para escenarios modernos de PnP.PowerShell se asume el uso de un `ClientId` propio o configurado de forma explícita por el usuario/entorno.
 - No se deben guardar contraseñas, secretos de cliente ni tokens persistentes definidos por esta especificación.
+- El contexto SharePoint activo no debe persistirse en disco ni cruzar sesiones/runspaces; su alcance funcional es la sesión PowerShell actual.
+- Los mensajes auxiliares de operación deben canalizarse como salida verbose para que solo aparezcan cuando el operador indique `-Verbose`; los errores, prompts e instrucciones necesarias para la autenticación no se consideran mensajes auxiliares.
 
 ## Supuestos
 
@@ -114,3 +123,6 @@ Definir una capacidad funcional unificada, identificada como tool `Connect-Spo`,
 | 0.4.0 | 2026-06-13 | Spec Design Agent | Incorpora `Connect-Spo` como nombre público principal esperado por solicitud explícita del usuario. |
 | 0.5.0 | 2026-06-13 | Spec Design Agent | Incorpora `tools/Connect-Spo` como ubicación objetivo del tool aprobado `Connect-Spo`. |
 | 0.6.0 | 2026-06-14 | Spec Design Agent | Autoriza `modules/Connect-Spo` como módulo PowerShell reusable importable por nombre y dependencia para tools adoptantes. |
+| 0.7.0 | 2026-06-15 | Spec Design Agent | Aprueba contexto SharePoint activo de sesión para reutilizar conexión y datos de autenticación en tools posteriores sin repetir parámetros. |
+| 0.8.0 | 2026-06-18 | Spec Design Agent | Aprueba reutilizar una conexión activa válida para el mismo sitio y app sin repetir login. |
+| 0.9.0 | 2026-06-18 | Spec Design Agent | Aprueba modo Quiet por defecto y salida verbose para mensajes auxiliares de autenticación. |

@@ -58,3 +58,22 @@ Desde `tools/Connect-Spo`:
 | Version | Fecha | Agente | Descripcion |
 |---------|-------|--------|-------------|
 | 0.1.0 | 2026-06-13 | Testing Agent | Registro de validación formal del traslado del tool a `tools/Connect-Spo`. |
+
+## Iteracion 2026-06-18: Modo Quiet/Verbose
+
+**Estado:** APROBADO
+
+| Verificacion | Resultado |
+|--------------|-----------|
+| `Invoke-Pester -Path tests` en `tools/Connect-Spo` | 19 passed, 0 failed |
+| `Invoke-ScriptAnalyzer` sobre `modules/Connect-Spo/Connect-Spo.psm1` | Sin hallazgos |
+| Import global disponible `Import-Module Connect-Spo -Force` | APROBADO |
+| ScriptAnalyzer sobre modulo instalado | Sin hallazgos |
+
+**Criterios validados:** Quiet no emite registros verbose por defecto; `-Verbose` muestra mensajes auxiliares; la salida funcional de conexion se conserva.
+
+## Control de Cambios
+
+| Version | Fecha | Agente | Descripcion |
+|---------|-------|--------|-------------|
+| 0.2.0 | 2026-06-18 | Testing Agent | Aprueba verificacion de modo Quiet/Verbose e importacion del modulo instalado. |

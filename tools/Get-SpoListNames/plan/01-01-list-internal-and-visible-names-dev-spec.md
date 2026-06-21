@@ -1,12 +1,12 @@
 # Dev Spec: Listar nombres internos y visibles de listas del sitio
 
-**Estado:** EN_REVISION
+**Estado:** APROBADO
 
 **Desarrollo:** `tools/Get-SpoListNames`
 **Producto:** `00-spo-list-names-spec.md`
 **Epica:** `01-site-list-discovery-spec.md`
 **Historia:** `01-01-list-internal-and-visible-names-spec.md`
-**Basado en story spec version:** 0.3.0
+**Basado en story spec version:** 0.6.0
 **Fecha:** 2026-06-12
 
 ---
@@ -42,13 +42,13 @@ PnP.PowerShell >= 2.0.0   # conexion a SharePoint Online y enumeracion de listas
 
 ### Alcance Tecnico de Esta Historia
 
-Esta historia crea un script PowerShell que se conecta a un sitio de SharePoint Online, obtiene las listas del web actual, excluye bibliotecas y listas ocultas, y devuelve una salida tabular con dos columnas: `InternalName` y `VisibleTitle`. En esta historia, `InternalName` se mapeara desde `EntityTypeName`, segun lo aprobado en el story spec.
+Esta historia crea un script PowerShell que se conecta a un sitio de SharePoint Online, obtiene las listas del web actual, excluye bibliotecas y listas ocultas, y devuelve una salida tabular con tres columnas: `GUID`, `EntityTypeName` y `Title`. En esta historia, `GUID` se mapea desde `Id`, segun lo aprobado en el story spec.
 
 Queda fuera de esta historia:
 
 - Soporte para multiples sitios en una sola ejecucion.
 - Exportacion a archivos.
-- Recuperacion de metadatos adicionales de listas.
+- Recuperacion de metadatos adicionales de listas fuera de `GUID`, `EntityTypeName` y `Title`.
 - Soporte para otros modos de autenticacion mas alla de `Interactive` y `DeviceLogin`.
 
 ### Estructura Objetivo
@@ -70,9 +70,9 @@ Los archivos de plan viven en `tools/Get-SpoListNames/plan/` junto con el resto 
 [SiteUrl + auth params]
     -> [Validar parametros y resolver ClientId]
     -> [Connect-PnPOnline -ValidateConnection]
-    -> [Get-PnPList -Includes EntityTypeName, Title, Hidden, BaseType]
+    -> [Get-PnPList -Includes Id, EntityTypeName, Title, Hidden, BaseType]
     -> [Excluir Hidden y BaseType DocumentLibrary]
-    -> [Mapear a InternalName + VisibleTitle]
+    -> [Mapear a GUID + EntityTypeName + Title]
     -> [Ordenar salida]
     -> [Emitir objetos]
 ```
@@ -106,7 +106,7 @@ Comportamiento previsto:
 - `AuthMode`: define si la conexion usa `Connect-PnPOnline -Interactive` o `-DeviceLogin`.
 - `ClientId`: opcional si existe `ENTRAID_APP_ID` o `ENTRAID_CLIENT_ID`; obligatorio si no hay variable de entorno disponible.
 - `TenantId`: opcional en `Interactive`; requerido para `DeviceLogin` si no existe `AZURE_TENANT_ID`.
-- Salida: secuencia de `PSCustomObject` con propiedades `InternalName` y `VisibleTitle`.
+- Salida: secuencia de `PSCustomObject` con propiedades `GUID`, `EntityTypeName` y `Title`.
 
 ---
 
@@ -120,13 +120,14 @@ Comportamiento previsto:
 - [x] `4.` Validar disponibilidad de `PnP.PowerShell` antes de conectar.
 - [x] `5.` Resolver `ClientId` desde parametro o desde `ENTRAID_APP_ID` / `ENTRAID_CLIENT_ID`.
 - [x] `6.` Conectar al sitio con `Connect-PnPOnline -ValidateConnection` usando el modo de autenticacion elegido.
-- [x] `7.` Obtener listas con `Get-PnPList -Includes EntityTypeName, Title, Hidden, BaseType`.
+- [x] `7.` Obtener listas con `Get-PnPList -Includes Id, EntityTypeName, Title, Hidden, BaseType`.
 - [x] `8.` Filtrar resultados para excluir:
   - [x] `8.1` listas ocultas (`Hidden`)
   - [x] `8.2` bibliotecas (`BaseType -eq 'DocumentLibrary'`)
 - [x] `9.` Proyectar la salida a objetos con propiedades:
-  - [x] `9.1` `InternalName` = `EntityTypeName`
-  - [x] `9.2` `VisibleTitle` = `Title`
+  - [x] `9.1` `GUID` = `Id`
+  - [x] `9.2` `EntityTypeName` = `EntityTypeName`
+  - [x] `9.3` `Title` = `Title`
 - [x] `10.` Ordenar la salida por `VisibleTitle` para mejorar legibilidad operativa.
 - [x] `11.` Implementar manejo de errores claros para:
   - [x] `11.1` modulo faltante
@@ -134,7 +135,7 @@ Comportamiento previsto:
   - [x] `11.3` fallo de conexion o sitio invalido
   - [x] `11.4` fallo al consultar listas
 - [x] `12.` Escribir tests en `tools/Get-SpoListNames/tests/Get-SpoListNames.Tests.ps1`.
-  - [x] `12.1` caso nominal con una lista visible no documental
+  - [x] `12.1` caso nominal con una lista visible no documental y salida `GUID`/`EntityTypeName`/`Title`
   - [x] `12.2` exclusion de bibliotecas
   - [x] `12.3` exclusion de listas ocultas
   - [x] `12.4` error claro cuando falta `ClientId`
@@ -154,7 +155,7 @@ Comportamiento previsto:
 - Comando `Verb-Noun`: `Get-SpoListNames`.
 - `CmdletBinding()` y validacion de parametros en el entrypoint.
 - Ayuda basada en comentarios en el script principal.
-- Sin comentarios redundantes; comentar solo decisiones no evidentes, como el mapeo de `EntityTypeName` a `InternalName`.
+- Sin comentarios redundantes; comentar solo decisiones no evidentes.
 - Control de cambios al inicio del script y de cualquier archivo PowerShell adicional.
 
 ---
@@ -166,11 +167,40 @@ Comportamiento previsto:
 - [x] Desde `tools/Get-SpoListNames`, `Invoke-ScriptAnalyzer -Path src -Recurse` no reporta errores bloqueantes.
 - [x] Smoke test manual documentado con una invocacion equivalente a `pwsh -File ./src/Get-SpoListNames.ps1 -SiteUrl $env:SPO_SITE_URL -AuthMode Interactive -ClientId $env:ENTRAID_APP_ID`.
 
+## Iteracion 2026-06-18: Modo Quiet por Defecto
+
+### Alcance Tecnico
+
+El refinamiento funcional aprobado exige que `Get-SpoListNames` opere en modo Quiet por defecto. La implementacion debe:
+
+1. Mantener la salida funcional aprobada: objetos con `GUID`, `EntityTypeName` y `Title`.
+2. Mantener errores accionables y prompts necesarios.
+3. No emitir mensajes auxiliares de estado, progreso o diagnostico por defecto.
+4. Emitir mensajes auxiliares solo mediante `Write-Verbose`.
+5. Aplicar el mismo comportamiento al script incubado y al modulo reusable `modules/Get-SpoListNames/Get-SpoListNames.psm1`.
+
+### Mensajes Verbose Planificados
+
+- Resolucion de contexto de ejecucion desde parametros explicitos o contexto activo.
+- Inicio de consulta de listas del sitio.
+- Cantidad de listas no documentales visibles devueltas.
+
+### TODOs Quiet/Verbose
+
+- [ ] `13.` Agregar linea de Control de Cambios PowerShell para modo Quiet/Verbose en script y modulo.
+- [ ] `14.` Agregar `Write-Verbose` al resolver contexto explicito o activo.
+- [ ] `15.` Agregar `Write-Verbose` antes de `Get-PnPList`.
+- [ ] `16.` Agregar `Write-Verbose` con cantidad de listas devueltas.
+- [ ] `17.` Agregar pruebas para ausencia de registros verbose sin `-Verbose`.
+- [ ] `18.` Agregar pruebas para presencia de registros verbose con `-Verbose`.
+- [ ] `19.` Ejecutar Pester y ScriptAnalyzer.
+- [ ] `20.` Sincronizar el modulo instalado globalmente tras aprobar pruebas.
+
 ---
 
 ## Notas de Implementacion
 
-- La historia requiere `EntityTypeName` como nombre interno, aunque ese no sea el nombre visible ni la URL de la lista.
+- La historia requiere `GUID` como identificador inequivoco y `EntityTypeName` como referencia tecnica adicional.
 - Se usara `-ValidateConnection` al conectar para que el error de sitio invalido o inaccesible ocurra en el boundary de conexion y no mas tarde.
 - La implementacion debe preferir un solo archivo de script salvo que aparezca una necesidad real de separar helpers por legibilidad o testabilidad.
 - Los tests deben mockear `Connect-PnPOnline` y `Get-PnPList`; no deben depender de un tenant real para el flujo automatizado.
@@ -188,3 +218,6 @@ Comportamiento previsto:
 | 0.5.0 | 2026-06-12 | Dev Agent | Deja el dev spec en EN_REVISION para handoff a Testing tras la migracion estructural |
 | 0.6.0 | 2026-06-12 | Dev Agent | Sincroniza TODOs y criterios de testing con el estado real de implementacion y verificacion |
 | 0.7.0 | 2026-06-12 | Dev Agent | Sincroniza el contrato publico con `TenantId` ya implementado y expone la ayuda a nivel de script |
+| 0.8.0 | 2026-06-15 | Planning Agent | Actualiza dev spec aprobado para salida `GUID`, `EntityTypeName` y `Title` |
+| 0.9.0 | 2026-06-15 | Dev Agent | Implementa cambio de salida y deja el dev spec en EN_REVISION para Testing |
+| 1.0.0 | 2026-06-18 | Planning Agent | Aprueba plan tecnico para modo Quiet por defecto y mensajes auxiliares via `-Verbose`. |

@@ -27,6 +27,7 @@ Reduce errores al referenciar listas en scripts, soporte e integraciones, y evit
 |----|--------|---------|--------|
 | 01-01 | Listar nombres internos y visibles de listas del sitio | `01-01-list-internal-and-visible-names-spec.md` | APROBADO |
 | 01-02 | Consumir autenticacion unificada mediante modulo Connect-Spo | `01-02-consume-connect-spo-module-for-authentication-spec.md` | APROBADO |
+| 01-03 | Usar contexto SharePoint activo de Connect-Spo | `01-03-use-active-connect-spo-session-context-spec.md` | APROBADO |
 
 ---
 
@@ -35,6 +36,7 @@ Reduce errores al referenciar listas en scripts, soporte e integraciones, y evit
 - El operador debe poder identificar el sitio de SharePoint objetivo.
 - El sitio objetivo debe ser accesible en modo lectura para el contexto con que se ejecute el script.
 - Para autenticacion SharePoint unificada, la tool debe consumir el modulo `Connect-Spo` por nombre y no mediante rutas relativas a `tools/Connect-Spo`.
+- Para ejecuciones sin parametros de conexion, la tool puede usar el contexto SharePoint activo de sesion registrado por `Connect-Spo`.
 
 ---
 
@@ -52,6 +54,7 @@ Reduce errores al referenciar listas en scripts, soporte e integraciones, y evit
 - Los archivos de plan viven en `tools/Get-SpoListNames/plan/`; el nombre logico vigente de la herramienta es `Get-SpoListNames`.
 - El empaquetado como modulo se cubre en la epica `02-powershell-module-packaging-spec.md`; esta epica mantiene el alcance funcional de consulta de listas.
 - La historia `01-02` cubre la adopcion funcional de `Connect-Spo` como dependencia de modulo para autenticacion, sin cambiar los datos de salida aprobados para listas.
+- La historia `01-03` cubre la reutilizacion del contexto activo de `Connect-Spo` para invocar `Get-SpoListNames` sin parametros de conexion.
 
 ---
 
@@ -65,3 +68,4 @@ Reduce errores al referenciar listas en scripts, soporte e integraciones, y evit
 | 0.4.0 | 2026-06-12 | Spec Design Agent | Aclara que el empaquetado como modulo se cubre en una epica separada y marca la epica EN_REVISION |
 | 0.5.0 | 2026-06-14 | Spec Design Agent | Agrega historia `01-02` para consumir autenticacion mediante modulo `Connect-Spo` por nombre. |
 | 0.6.0 | 2026-06-14 | Spec Design Agent | Cambia estado a APROBADO y marca historia 01-02 como APROBADO por aprobacion explicita del usuario para pasar a Planning. |
+| 0.7.0 | 2026-06-15 | Spec Design Agent | Agrega historia 01-03 aprobada para usar contexto SharePoint activo de `Connect-Spo` en ejecuciones sin parametros. |

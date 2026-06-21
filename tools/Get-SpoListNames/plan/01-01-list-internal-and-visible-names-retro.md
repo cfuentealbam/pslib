@@ -74,6 +74,24 @@ Pester si pudo ejecutarse y la suite termino con 5 tests pasando. No fue posible
 
 ---
 
+## Iteracion 2026-06-15: salida GUID, EntityTypeName y Title
+
+**Motivo:** El usuario aprobo cambiar la salida publica de `Get-SpoListNames` para identificar listas por `GUID`, `EntityTypeName` y `Title`.
+
+**Cambios implementados:**
+
+| Archivo | Accion | Notas |
+|---------|--------|-------|
+| `src/Get-SpoListNames.ps1` | modificado | Consulta `Id` en `Get-PnPList` y proyecta `GUID`, `EntityTypeName`, `Title`. |
+| `modules/Get-SpoListNames/Get-SpoListNames.psm1` | modificado | Alinea el modulo reusable con el nuevo contrato de salida. |
+| `tests/Get-SpoListNames.Tests.ps1` | modificado | Valida `GUID`, `EntityTypeName`, `Title` e inclusion de `Id`. |
+| `tests/Get-SpoListNames.Module.Tests.ps1` | modificado | Valida el contrato del modulo y la conexion explicita. |
+| `plan/01-01-list-internal-and-visible-names-dev-spec.md` | modificado | Registra la implementacion y queda en `EN_REVISION` para Testing. |
+
+**Decision relevante:** Se conserva el filtrado vigente de listas ocultas y bibliotecas documentales. El cambio se limita al contrato de columnas devueltas.
+
+---
+
 ## Control de Cambios
 
 | Version | Fecha | Agente | Descripcion |
@@ -82,3 +100,4 @@ Pester si pudo ejecutarse y la suite termino con 5 tests pasando. No fue posible
 | 0.2.0 | 2026-06-12 | Dev Agent | Actualiza la retro para reflejar la migracion a `tools/Get-SpoListNames` |
 | 0.3.0 | 2026-06-12 | Dev Agent | Sincroniza la retro con el cierre de TODOs del dev spec sin cambios funcionales |
 | 0.4.0 | 2026-06-12 | Dev Agent | Registra el ajuste documental de `TenantId` y la exposicion de ayuda a nivel de script |
+| 0.5.0 | 2026-06-15 | Dev Agent | Registra implementacion de salida `GUID`, `EntityTypeName` y `Title` |

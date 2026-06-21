@@ -25,6 +25,8 @@ Cada tool SharePoint puede terminar pidiendo datos de login, parámetros o manej
 - Definir `modules/Connect-Spo` como ubicación aprobada del módulo PowerShell no compilado reusable, manteniendo los artefactos de proceso en `tools/Connect-Spo/plan/`.
 - Definir que el módulo debe ser importable por nombre mediante `Import-Module Connect-Spo` cuando esté disponible en `PSModulePath`.
 - Definir que el módulo expone como API pública el comando `Connect-Spo`.
+- Definir que una autenticación exitosa registra un contexto SharePoint activo de sesión reutilizable por tools adoptantes.
+- Definir que `Connect-Spo` reutiliza una conexión activa válida cuando se invoca para el mismo sitio y app.
 - Definir que las tools adoptantes deben consumir la capacidad como dependencia de módulo por nombre, sin rutas relativas a `tools/Connect-Spo`.
 - Definir que ninguna tool SharePoint que adopte la capacidad pida contraseña directamente.
 - Definir respuestas observables ante éxito, cancelación, permisos insuficientes, configuración incompleta y fallas de autenticación, incluyendo mensajes mínimos funcionales.
@@ -45,6 +47,7 @@ Cada tool SharePoint puede terminar pidiendo datos de login, parámetros o manej
 |----|----------|-------------|
 | 01-01 | Autenticación interactiva unificada para tools SharePoint | Como usuario de una tool SharePoint, quiero autenticarme con credenciales MS365 de forma interactiva y consistente, sin entregar contraseñas a la tool. |
 | 01-02 | Publicar Connect-Spo como módulo PowerShell reutilizable | Como mantenedor de tools SharePoint, quiero importar `Connect-Spo` como módulo disponible por nombre, para reutilizar la autenticación sin depender de rutas relativas entre tools. |
+| 01-03 | Registrar contexto SharePoint activo de sesión | Como operador, quiero ejecutar `Connect-Spo` una vez y reutilizar esa conexión en tools posteriores sin repetir parámetros. |
 
 ## Dependencias Funcionales
 
@@ -55,6 +58,7 @@ Cada tool SharePoint puede terminar pidiendo datos de login, parámetros o manej
 - Convención PowerShell Verb-Noun: `Connect-Spo` usa el verbo aprobado `Connect`; el sustantivo abreviado `Spo` queda aprobado como nombre funcional observable por decisión explícita del usuario.
 - Convención de repositorio para carpeta de tool: el trabajo debe ubicarse en `tools/Connect-Spo`, reemplazando la carpeta histórica `tools/sharepoint-auth-unified/`.
 - Convención de repositorio para módulos PowerShell no compilados: el módulo reusable aprobado debe ubicarse en `modules/Connect-Spo`.
+- Una sesión PowerShell con `Connect-Spo` autenticado exitosamente puede exponer contexto activo solo dentro de esa sesión/runspace, sin persistencia en disco.
 
 ## Mensajes Mínimos Funcionales Propuestos
 
@@ -79,3 +83,5 @@ Cada tool SharePoint puede terminar pidiendo datos de login, parámetros o manej
 | 0.4.0 | 2026-06-13 | Spec Design Agent | Incorpora `Connect-Spo` como comando público principal esperado por solicitud explícita del usuario. |
 | 0.5.0 | 2026-06-13 | Spec Design Agent | Incorpora `tools/Connect-Spo` como ubicación objetivo del tool aprobado `Connect-Spo`. |
 | 0.6.0 | 2026-06-14 | Spec Design Agent | Agrega historia para publicar `Connect-Spo` como módulo reusable en `modules/Connect-Spo` importable por nombre. |
+| 0.7.0 | 2026-06-15 | Spec Design Agent | Agrega historia para registrar contexto SharePoint activo de sesión reutilizable por tools adoptantes. |
+| 0.8.0 | 2026-06-18 | Spec Design Agent | Extiende la historia de contexto activo para evitar login repetido cuando la conexión existente sigue válida para el mismo sitio y app. |

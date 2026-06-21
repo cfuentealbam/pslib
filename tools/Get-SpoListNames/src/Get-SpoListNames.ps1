@@ -3,20 +3,25 @@
 # v0.1.0 | 2026-06-12 | Dev Agent | Implementacion inicial
 # v0.1.2 | 2026-06-12 | Dev Agent | Migracion estructural a tools/Get-SpoListNames
 # v0.2.0 | 2026-06-14 | Implementation Agent | Consume autenticacion mediante modulo Connect-Spo importado por nombre
+# v0.2.1 | 2026-06-15 | Codex | Usa la conexion devuelta por Connect-Spo al consultar listas
+# v0.3.0 | 2026-06-15 | Dev Agent | Cambia salida a GUID, EntityTypeName y Title
+# v0.4.0 | 2026-06-15 | Dev Agent | Permite usar contexto activo de Connect-Spo sin parametros
+# v0.5.0 | 2026-06-18 | Dev Agent | Agrega mensajes auxiliares solo mediante Verbose
 # ===========================================================================
 
 <#
 .SYNOPSIS
-Lista nombres tecnicos y visibles de listas en un sitio SharePoint Online.
+Lista GUID, EntityTypeName y Title de listas en un sitio SharePoint Online.
 
 .DESCRIPTION
 Autentica contra un sitio SharePoint Online mediante el modulo Connect-Spo
-importado por nombre y devuelve listas no documentales visibles. El campo
-InternalName se mapea desde EntityTypeName segun lo aprobado en el spec de la
-historia.
+importado por nombre o reutiliza el contexto SharePoint activo de la sesion
+cuando no se entrega SiteUrl. Devuelve listas no documentales visibles con
+GUID, EntityTypeName y Title.
 
 .PARAMETER SiteUrl
-URL absoluta del sitio SharePoint Online a consultar.
+URL absoluta del sitio SharePoint Online a consultar. Si se omite, se usa el
+SiteUrl del contexto activo creado por Connect-Spo.
 
 .PARAMETER AuthMode
 Modo de autenticacion a solicitar a Connect-Spo.
@@ -30,15 +35,19 @@ Tenant de Entra ID requerido por Connect-Spo. Si se omite, el script intenta
 resolverlo desde AZURE_TENANT_ID.
 
 .OUTPUTS
-PSCustomObject. Objetos con propiedades InternalName y VisibleTitle.
+PSCustomObject. Objetos con propiedades GUID, EntityTypeName y Title.
 
 .EXAMPLE
 .\Get-SpoListNames.ps1 -SiteUrl "https://contoso.sharepoint.com/sites/demo" -AuthMode DeviceLogin -ClientId "00000000-0000-0000-0000-000000000000" -TenantId "contoso.onmicrosoft.com"
+
+.EXAMPLE
+Connect-Spo -SiteUrl "https://contoso.sharepoint.com/sites/demo" -TenantId "contoso.onmicrosoft.com" -ClientId "00000000-0000-0000-0000-000000000000" -AuthMode DeviceCode
+.\Get-SpoListNames.ps1
 #>
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)]
+    [Parameter()]
     [ValidateNotNullOrEmpty()]
     [ValidatePattern('^https://')]
     [string]$SiteUrl,
@@ -145,7 +154,7 @@ function ConvertTo-GetSpoListNamesConnectSpoAuthMode {
 function Invoke-GetSpoListNamesAuthentication {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern('^https://')]
         [string]$SiteUrl,
@@ -166,10 +175,86 @@ function Invoke-GetSpoListNamesAuthentication {
     $connectSpoAuthMode = ConvertTo-GetSpoListNamesConnectSpoAuthMode -AuthMode $AuthMode
 
     try {
-        Connect-Spo -SiteUrl $SiteUrl -TenantId $TenantId -ClientId $ClientId -AuthMode $connectSpoAuthMode -ErrorAction Stop | Out-Null
+        return Connect-Spo -SiteUrl $SiteUrl -TenantId $TenantId -ClientId $ClientId -AuthMode $connectSpoAuthMode -ErrorAction Stop
     }
     catch {
         throw "No se pudo autenticar mediante Connect-Spo para el sitio '$SiteUrl'. $($_.Exception.Message)"
+    }
+}
+
+function Get-GetSpoListNamesActiveContext {
+    [OutputType([object])]
+    [CmdletBinding()]
+    param()
+
+    $contextVariable = Get-Variable -Name PSLibSpoConnectionContext -Scope Global -ErrorAction SilentlyContinue
+    if ($null -eq $contextVariable) {
+        return $null
+    }
+
+    $context = $contextVariable.Value
+    if ($null -eq $context) {
+        return $null
+    }
+
+    if (-not $context.PSObject.Properties['Connection']) {
+        return $null
+    }
+
+    if (-not $context.PSObject.Properties['SiteUrl']) {
+        return $null
+    }
+
+    if ($null -eq $context.Connection) {
+        return $null
+    }
+
+    if ([string]::IsNullOrWhiteSpace([string]$context.SiteUrl)) {
+        return $null
+    }
+
+    return $context
+}
+
+function Resolve-GetSpoListNamesExecutionContext {
+    [OutputType([pscustomobject])]
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]$SiteUrl,
+
+        [Parameter()]
+        [string]$TenantId,
+
+        [Parameter()]
+        [string]$ClientId,
+
+        [Parameter(Mandatory)]
+        [ValidateSet('Interactive', 'DeviceLogin')]
+        [string]$AuthMode
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($SiteUrl)) {
+        Write-Verbose "Usando parametros explicitos para consultar listas en '$SiteUrl'."
+        $resolvedClientId = Resolve-GetSpoListNamesClientId -ClientId $ClientId
+        $resolvedTenantId = Resolve-GetSpoListNamesTenantId -TenantId $TenantId
+        $connection = Invoke-GetSpoListNamesAuthentication -SiteUrl $SiteUrl -TenantId $resolvedTenantId -ClientId $resolvedClientId -AuthMode $AuthMode
+
+        return [pscustomobject]@{
+            Connection = $connection
+            SiteUrl    = $SiteUrl
+        }
+    }
+
+    $activeContext = Get-GetSpoListNamesActiveContext
+    if ($null -eq $activeContext) {
+        throw 'No existe una conexion SharePoint activa. Ejecuta Connect-Spo primero o proporciona SiteUrl, TenantId y ClientId.'
+    }
+
+    Write-Verbose "Usando contexto SharePoint activo para consultar listas en '$($activeContext.SiteUrl)'."
+    return [pscustomobject]@{
+        Connection = $activeContext.Connection
+        SiteUrl    = $activeContext.SiteUrl
     }
 }
 
@@ -177,7 +262,7 @@ function Get-SpoListNames {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern('^https://')]
         [string]$SiteUrl,
@@ -195,16 +280,17 @@ function Get-SpoListNames {
 
     <#
     .SYNOPSIS
-    Lista nombres tecnicos y visibles de listas en un sitio SharePoint Online.
+    Lista GUID, EntityTypeName y Title de listas en un sitio SharePoint Online.
 
     .DESCRIPTION
     Autentica contra un sitio SharePoint Online mediante el modulo Connect-Spo
-    importado por nombre y devuelve listas no documentales visibles. El campo
-    InternalName se mapea desde EntityTypeName segun lo aprobado en el spec de
-    la historia.
+    importado por nombre o reutiliza el contexto SharePoint activo de la sesion
+    cuando no se entrega SiteUrl. Devuelve listas no documentales visibles con
+    GUID, EntityTypeName y Title.
 
     .PARAMETER SiteUrl
-    URL absoluta del sitio SharePoint Online a consultar.
+    URL absoluta del sitio SharePoint Online a consultar. Si se omite, se usa
+    el SiteUrl del contexto activo creado por Connect-Spo.
 
     .PARAMETER AuthMode
     Modo de autenticacion a solicitar a Connect-Spo.
@@ -218,34 +304,42 @@ function Get-SpoListNames {
     intenta resolverlo desde AZURE_TENANT_ID.
 
     .OUTPUTS
-    PSCustomObject. Objetos con propiedades InternalName y VisibleTitle.
+    PSCustomObject. Objetos con propiedades GUID, EntityTypeName y Title.
 
     .EXAMPLE
     .\Get-SpoListNames.ps1 -SiteUrl "https://contoso.sharepoint.com/sites/demo" -ClientId "00000000-0000-0000-0000-000000000000" -TenantId "contoso.onmicrosoft.com"
+
+    .EXAMPLE
+    Connect-Spo -SiteUrl "https://contoso.sharepoint.com/sites/demo" -TenantId "contoso.onmicrosoft.com" -ClientId "00000000-0000-0000-0000-000000000000" -AuthMode DeviceCode
+    .\Get-SpoListNames.ps1
     #>
 
-    $resolvedClientId = Resolve-GetSpoListNamesClientId -ClientId $ClientId
-    $resolvedTenantId = Resolve-GetSpoListNamesTenantId -TenantId $TenantId
-
-    Invoke-GetSpoListNamesAuthentication -SiteUrl $SiteUrl -TenantId $resolvedTenantId -ClientId $resolvedClientId -AuthMode $AuthMode
+    $spoExecutionContext = Resolve-GetSpoListNamesExecutionContext -SiteUrl $SiteUrl -TenantId $TenantId -ClientId $ClientId -AuthMode $AuthMode
 
     try {
-        $lists = Get-PnPList -Includes 'EntityTypeName', 'Title', 'Hidden', 'BaseType' -ErrorAction Stop
+        Write-Verbose "Consultando listas del sitio '$($spoExecutionContext.SiteUrl)'."
+        $lists = Get-PnPList -Connection $spoExecutionContext.Connection -Includes 'Id', 'EntityTypeName', 'Title', 'Hidden', 'BaseType' -ErrorAction Stop
     }
     catch {
-        throw "No se pudieron consultar las listas del sitio '$SiteUrl'. $($_.Exception.Message)"
+        throw "No se pudieron consultar las listas del sitio '$($spoExecutionContext.SiteUrl)'. $($_.Exception.Message)"
     }
 
-    $lists |
+    $visibleLists = @($lists |
         Where-Object {
             -not $_.Hidden -and "$($_.BaseType)" -ne 'DocumentLibrary'
         } |
-        Sort-Object -Property Title |
-        Select-Object @{
-            Name       = 'InternalName'
+        Sort-Object -Property Title)
+
+    Write-Verbose "Listas no documentales visibles devueltas: $($visibleLists.Count)."
+
+    $visibleLists | Select-Object @{
+            Name       = 'GUID'
+            Expression = { $_.Id }
+        }, @{
+            Name       = 'EntityTypeName'
             Expression = { $_.EntityTypeName }
         }, @{
-            Name       = 'VisibleTitle'
+            Name       = 'Title'
             Expression = { $_.Title }
         }
 }

@@ -34,6 +34,8 @@ Definir el comportamiento observable de una capacidad común de login interactiv
 14. La tool no guarda contraseñas, secretos de cliente ni otros secretos en disco como parte de esta capacidad.
 15. La experiencia de autenticación debe poder ser usada de manera común por más de una tool SharePoint, manteniendo nombres de entradas y mensajes consistentes.
 16. `Get-SpoListNames` queda identificada como la primera tool SharePoint candidata/adoptante inicial, sin que esta historia modifique su comportamiento por sí misma.
+17. En modo Quiet por defecto, `Connect-Spo` no muestra mensajes auxiliares de estado, progreso o diagnóstico que no sean necesarios para completar la interacción de autenticación.
+18. Cuando el operador usa `-Verbose`, `Connect-Spo` muestra los mensajes informativos, diagnósticos o de progreso que hasta ahora se mostraban durante la autenticación.
 
 ## Explicación Funcional de DeviceCode
 
@@ -55,6 +57,9 @@ Definir el comportamiento observable de una capacidad común de login interactiv
 - Dado cualquier ejecución, cuando finaliza la autenticación, entonces no quedan contraseñas ni secretos persistidos en disco por esta capacidad.
 - Dado que otra tool SharePoint adopta la capacidad, cuando solicita login, entonces usa las mismas entradas funcionales principales y una experiencia de errores consistente.
 - Dado que `Get-SpoListNames` sea tratada como primera adoptante inicial en specs posteriores, cuando se defina su adopción, entonces deberá respetar esta historia sin que este documento modifique directamente esa tool.
+- Dado que el operador ejecuta `Connect-Spo` sin `-Verbose`, cuando no se requiere interacción adicional aparte del flujo de login, entonces no se muestran mensajes auxiliares de estado, progreso o diagnóstico.
+- Dado que el operador ejecuta `Connect-Spo -Verbose`, cuando la autenticación avanza, entonces se muestran los mensajes informativos que antes se mostraban por defecto.
+- Dado que el modo de autenticación requiere interacción, cuando `Connect-Spo` se ejecuta en modo Quiet, entonces se mantienen visibles solo las instrucciones, códigos, prompts o errores necesarios para que el usuario complete o entienda la autenticación.
 
 ## Mensajes Mínimos Funcionales Propuestos
 
@@ -70,6 +75,7 @@ Definir el comportamiento observable de una capacidad común de login interactiv
 - `Connect-Spo` es el nombre público principal aprobado para esta historia; usa el verbo PowerShell aprobado `Connect` y el sustantivo abreviado `Spo` por decisión explícita del usuario.
 - La carpeta de trabajo objetivo aprobada es `tools/Connect-Spo`.
 - La historia no autoriza almacenamiento de secretos ni autenticación no interactiva.
+- Los mensajes auxiliares de autenticación deben considerarse salida verbose; no deben emitirse por defecto como texto directo al host.
 
 ## Fuera de Alcance
 
@@ -102,3 +108,4 @@ Definir el comportamiento observable de una capacidad común de login interactiv
 | 0.3.0 | 2026-06-13 | Discovery Agent | Cambia estado a APROBADO por aprobación explícita del usuario. |
 | 0.4.0 | 2026-06-13 | Spec Design Agent | Incorpora `Connect-Spo` como API pública principal por solicitud explícita del usuario. |
 | 0.5.0 | 2026-06-13 | Spec Design Agent | Incorpora `tools/Connect-Spo` como ubicación objetivo del tool aprobado `Connect-Spo`. |
+| 0.6.0 | 2026-06-18 | Spec Design Agent | Aprueba modo Quiet por defecto y `-Verbose` para mensajes auxiliares de autenticación. |

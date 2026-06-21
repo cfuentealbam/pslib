@@ -33,3 +33,19 @@
 | Version | Fecha | Agente | Descripcion |
 |---------|-------|--------|-------------|
 | 0.1.0 | 2026-06-13 | Implementation Agent | Retro inicial de la implementación de autenticación interactiva unificada SharePoint. |
+
+## Iteracion 2026-06-18: Modo Quiet/Verbose
+
+**Cambios implementados:**
+
+- `modules/Connect-Spo/Connect-Spo.psm1` emite mensajes auxiliares solo con `Write-Verbose`.
+- Se agrego cobertura Pester para confirmar modo Quiet por defecto y salida verbose con `-Verbose`.
+- Se sincronizo el modulo instalado en la biblioteca global disponible del usuario.
+
+**Nota de instalacion:** Las rutas compartidas `C:\Program Files\PowerShell\Modules` y `C:\Program Files\WindowsPowerShell\Modules` no permitieron escritura sin privilegios de administrador.
+
+## Control de Cambios
+
+| Version | Fecha | Agente | Descripcion |
+|---------|-------|--------|-------------|
+| 0.2.0 | 2026-06-18 | Dev Agent | Registra implementacion de modo Quiet/Verbose e instalacion global disponible. |

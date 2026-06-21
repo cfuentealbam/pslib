@@ -326,6 +326,35 @@ Casos mínimos:
 - `ConvertTo-SharePointUnifiedAuthError` normaliza permisos/autorización.
 - `ConvertTo-SharePointUnifiedAuthError` conserva contexto en error general.
 
+## Iteracion 2026-06-18: Modo Quiet por Defecto
+
+### Alcance Tecnico
+
+El refinamiento funcional aprobado exige que `Connect-Spo` opere en modo Quiet por defecto. La implementacion debe:
+
+1. Mantener la salida funcional aprobada: objeto de conexion PnP.
+2. Mantener errores accionables y salidas necesarias para la interaccion de autenticacion.
+3. No emitir mensajes auxiliares de estado, progreso o diagnostico por salida host/information/output.
+4. Emitir mensajes auxiliares solo mediante `Write-Verbose`, visibles cuando el operador use `-Verbose`.
+5. Aplicar el mismo comportamiento al modulo reusable `modules/Connect-Spo/Connect-Spo.psm1`.
+
+### Mensajes Verbose Planificados
+
+- Reutilizacion de conexion activa valida.
+- Inicio de autenticacion explicita mediante `Connect-PnPOnline`.
+- Registro de contexto SharePoint activo tras autenticacion exitosa.
+
+### TODOs Quiet/Verbose
+
+- [x] 48. Agregar linea de Control de Cambios PowerShell para modo Quiet/Verbose.
+- [x] 49. Agregar `Write-Verbose` en reutilizacion de conexion activa valida.
+- [x] 50. Agregar `Write-Verbose` antes de invocar autenticacion explicita.
+- [x] 51. Agregar `Write-Verbose` despues de registrar contexto activo.
+- [x] 52. Agregar prueba que confirme que `Connect-Spo` sin `-Verbose` no emite registros verbose.
+- [x] 53. Agregar prueba que confirme que `Connect-Spo -Verbose` emite mensajes auxiliares.
+- [x] 54. Ejecutar Pester y ScriptAnalyzer.
+- [x] 55. Sincronizar el modulo instalado globalmente tras aprobar pruebas.
+
 ## Comandos de Verificación
 
 Ejecutar desde `tools/Connect-Spo` después del traslado:
@@ -362,3 +391,5 @@ No se define smoke test que autentique contra SharePoint real porque requiere te
 | 0.7.0 | 2026-06-13 | Planning Agent | Actualiza dev spec por refinamiento funcional aprobado para trasladar el tool a `tools/Connect-Spo`; deja el documento en BORRADOR para aprobación explícita antes de implementar el refactor de ubicación. |
 | 0.8.0 | 2026-06-13 | Planning Agent | Cambia estado a APROBADO por aprobación explícita del usuario del dev spec actualizado para mover el tool a `tools/Connect-Spo`. |
 | 0.9.0 | 2026-06-13 | Implementation Agent | Implementa el traslado de ubicación a `tools/Connect-Spo`, renombra script/tests y deja el dev spec en EN_REVISION para Testing. |
+| 1.0.0 | 2026-06-18 | Planning Agent | Aprueba plan tecnico para modo Quiet por defecto y mensajes auxiliares via `-Verbose`. |
+| 1.1.0 | 2026-06-18 | Dev Agent | Implementa modo Quiet/Verbose, completa TODOs y deja el dev spec en EN_REVISION para Testing. |
